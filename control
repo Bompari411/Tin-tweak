@@ -1,0 +1,9 @@
+Package: com.tin.tintweak
+Name: TinTweak
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Ukazkovy tweak pro LiveContainer - logger obrazovek + vizualni potvrzeni.
+Maintainer: Filip
+Author: Filip
+Section: Tweaks
+Depends: mobilesubstrate
