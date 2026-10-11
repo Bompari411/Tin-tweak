@@ -1,0 +1,45 @@
+name: Build TinTweak
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stahnout repo
+        uses: actions/checkout@v4
+
+      - name: Pripravit Theos (build systém pro iOS tweaky, na Linuxu)
+        uses: Randomblock1/theos-action@v1
+
+      - name: Zbuildit tweak
+        run: make clean && make
+
+      - name: Opravit cestu k CydiaSubstrate kvuli LiveContaineru
+        run: |
+          DYLIB=$(find .theos/obj -name 'TinTweak.dylib' | head -n 1)
+          echo "Nalezeny dylib: $DYLIB"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq llvm
+          OT=$(command -v llvm-otool || ls /usr/lib/llvm-*/bin/llvm-otool | head -n 1)
+          TOOL=$(command -v llvm-install-name-tool || ls /usr/lib/llvm-*/bin/llvm-install-name-tool | head -n 1)
+          echo "Pouzivam: $TOOL"
+          echo "--- zavislosti PRED upravou ---"
+          "$OT" -L "$DYLIB"
+          if "$OT" -L "$DYLIB" | grep -q "/Library/Frameworks/CydiaSubstrate"; then
+            "$TOOL" -change /Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate \
+                             @rpath/CydiaSubstrate.framework/CydiaSubstrate "$DYLIB"
+            echo "Cesta prepsana na @rpath"
+          else
+            echo "Absolutni cesta nenalezena - Theos ji zrejme resi relativne, nic nemenim"
+          fi
+          echo "--- zavislosti PO uprave ---"
+          "$OT" -L "$DYLIB"
+
+      - name: Nahrat dylib jako artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TinTweak-dylib
+          path: .theos/obj/**/*.dylib
+          retention-days: 14
